@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>HP48GX RPN Calculator</title>
+  <style>
+    body {
+      font-family: monospace;
+      background-color: #222;
+      color: #0f0;
+      padding: 20px;
+    }
+    #screen {
+      border: 2px solid #0f0;
+      padding: 10px;
+      margin-bottom: 10px;
+      height: 200px;
+      overflow-y: auto;
+      background-color: #000;
+    }
+    #input {
+      width: 100%;
+      font-size: 1.2em;
+      padding: 5px;
+      background-color: #111;
+      color: #0f0;
+      border: 1px solid #0f0;
+    }
+    .stack-item {
+      margin: 2px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>HP48GX RPN Calculator</h1>
+  <div id="screen">
+    <div id="stack"></div>
+  </div>
+  <input type="text" id="input" placeholder="Enter number or command (e.g., 42, ADD)" autofocus />
+
+  <script>
+    const input = document.getElementById('input');
+    const stackDiv = document.getElementById('stack');
+    let stack = [];
+
+    function updateStackDisplay() {
+      stackDiv.innerHTML = '';
+      for (let i = stack.length - 1; i >= 0; i--) {
+        const div = document.createElement('div');
+        div.className = 'stack-item';
+        div.textContent = `${i + 1}: ${stack[i]}`;
+        stackDiv.appendChild(div);
+      }
+    }
+
+    function executeCommand(cmd) {
+      cmd = cmd.toUpperCase();
+      if (!isNaN(cmd)) {
+        stack.push(parseFloat(cmd));
+      } else {
+        if (stack.length < 2 && ['ADD', 'SUB', 'MUL', 'DIV'].includes(cmd)) {
+          alert('Need at least two values on the stack');
+          return;
+        }
+        let b = stack.pop();
+        let a = stack.pop();
+        switch (cmd) {
+          case 'ADD': stack.push(a + b); break;
+          case 'SUB': stack.push(a - b); break;
+          case 'MUL': stack.push(a * b); break;
+          case 'DIV': stack.push(a / b); break;
+          case 'SWP': stack.push(b); stack.push(a); break;
+          case 'CLR': stack = []; break;
+          case 'DUP': stack.push(b); stack.push(b); break;
+          default:
+            alert(`Unknown command: ${cmd}`);
+            stack.push(a);
+            stack.push(b);
+        }
+      }
+      updateStackDisplay();
+    }
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const value = input.value.trim();
+        if (value) {
+          executeCommand(value);
+          input.value = '';
+        }
+      }
+    });
+
+    updateStackDisplay();
+  </script>
+</body>
+</html>
