@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Cable Tray Fill Calculator</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    display: flex;
+    justify-content: center;
+  }
+  .container {
+    width: 500px; /* Unified width for inputs and visualization */
+  }
+  label {
+    display: block;
+    margin-top: 10px;
+  }
+  input, select {
+    width: 100%;
+    padding: 5px;
+    margin-top: 5px;
+  }
+  button {
+    margin-top: 15px;
+    padding: 10px;
+    width: 100%;
+    font-size: 16px;
+  }
+  #resultText {
+    margin-top: 15px;
+    font-weight: bold;
+    white-space: pre-line;
+  }
+  canvas {
+    width: 100%; /* Match input section width */
+    height: auto;
+    border: 1px solid #ccc;
+    margin-top: 20px;
+    background: #fff;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h2>Cable Tray Fill Calculator</h2>
+  <label>Cable Outside Diameter:
+    <input type="number" id="cableOD" step="0.01" value="0.25">
+  </label>
+  <label>Tray Width:
+    <input type="number" id="trayWidth" step="0.1" value="12">
+  </label>
+  <label>Tray Height:
+    <input type="number" id="trayHeight" step="0.1" value="4">
+  </label>
+  <label>Spare Capacity (%):
+    <input type="number" id="sparePercent" step="1" value="20">
+  </label>
+  <label>Units:
+    <select id="units">
+      <option value="inches">Inches</option>
+      <option value="mm">Millimeters</option>
+    </select>
+  </label>
+  <button onclick="calculate()">Calculate</button>
+
+  <!-- Results below inputs -->
+  <p id="resultText">Enter values and click "Calculate".</p>
+
+  <!-- Visualization -->
+  <canvas id="trayCanvas" width="500" height="250"></canvas>
+</div>
+
+<script>
+function calculate() {
+  let od = parseFloat(document.getElementById('cableOD').value);
+  let width = parseFloat(document.getElementById('trayWidth').value);
+  let height = parseFloat(document.getElementById('trayHeight').value);
+  const spare = parseFloat(document.getElementById('sparePercent').value) / 100;
+  const units = document.getElementById('units').value;
+
+  // Convert mm to inches internally
+  if (units === 'mm') {
+    od /= 25.4;
+    width /= 25.4;
+    height /= 25.4;
+  }
+
+  const trayArea = width * height;
+  const usableArea = trayArea * (1 - spare);
+
+  // Packing gaps count as spare space
+  const cableArea = Math.PI * Math.pow(od / 2, 2);
+  let cableCount = Math.floor(usableArea / cableArea);
+
+  const usedArea = cableCount * cableArea;
+  const fillPercent = (usedArea / trayArea) * 100;
+
+  document.getElementById('resultText').innerText =
+    `Max Cables: ${cableCount}\nFill: ${fillPercent.toFixed(1)}% of tray area\nSpare: ${(100 - fillPercent).toFixed(1)}%`;
+
+  drawTray(width, height, od, cableCount, units);
+}
+
+function drawTray(trayW, trayH, cableOD, count, units) {
+  const canvas = document.getElementById('trayCanvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const scale = Math.min(canvas.width / trayW, canvas.height / trayH) * 0.8;
+  const drawW = trayW * scale;
+  const drawH = trayH * scale;
+  const offsetX = (canvas.width - drawW) / 2;
+  const offsetY = (canvas.height - drawH) / 2;
+
+  // Fill entire tray area with gray
+  ctx.fillStyle = 'rgba(200,200,200,0.5)';
+  ctx.fillRect(offsetX, offsetY, drawW, drawH);
+
+  // Draw tray walls (open top)
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = '#000';
+  ctx.beginPath();
+  ctx.moveTo(offsetX, offsetY); // left bottom
+  ctx.lineTo(offsetX, offsetY + drawH); // left top
+  ctx.moveTo(offsetX + drawW, offsetY); // right bottom
+  ctx.lineTo(offsetX + drawW, offsetY + drawH); // right top
+  ctx.moveTo(offsetX, offsetY + drawH); // bottom line
+  ctx.lineTo(offsetX + drawW, offsetY + drawH);
+  ctx.stroke();
+
+  // Labels
+  ctx.font = '14px Arial';
+  ctx.fillStyle = '#000';
+  ctx.fillText(`Tray: ${trayW.toFixed(2)} x ${trayH.toFixed(2)} ${units}`, offsetX, offsetY - 10);
+  ctx.fillText(`Cable OD: ${cableOD.toFixed(2)} ${units}`, offsetX, offsetY + drawH + 20);
+
+  const r = (cableOD / 2) * scale;
+  let drawn = 0;
+  let maxY = offsetY + drawH;
+
+  // Hexagonal packing visualization
+  const rowHeight = r * Math.sqrt(3);
+  let row = 0;
+  for (let y = maxY - r; y - r >= offsetY && drawn < count; y -= rowHeight) {
+    const xOffset = row % 2 === 0 ? 0 : r;
+    for (let x = offsetX + r + xOffset; x + r <= offsetX + drawW && drawn < count; x += cableOD * scale) {
+      drawCable(ctx, x, y, r);
+      drawn++;
+    }
+    row++;
+  }
+}
+
+function drawCable(ctx, x, y, r) {
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, 2 * Math.PI);
+  ctx.fillStyle = '#0077cc'; // Blue cables
+  ctx.fill();
+  ctx.lineWidth = 0.5; // Thin outline
+  ctx.strokeStyle = '#000';
+  ctx.stroke();
+}
+</script>
+</body>
+</html>
